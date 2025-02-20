@@ -12,6 +12,11 @@ const routes = [
     name: 'taskList',
     component: () => import('@/views/TaskList.vue'),
   },
+  {
+    path: '/register-user',
+    name: 'registerUser',
+    component: () => import('@/views/RegisterUser.vue'),
+  },
 ];
 
 const router = createRouter({
