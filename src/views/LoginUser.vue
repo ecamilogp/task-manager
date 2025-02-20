@@ -1,9 +1,68 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { helpers, required } from '@vuelidate/validators';
+import useVuelidate from '@vuelidate/core';
+import type { LoginForm } from '@/interfaces/loginInterface';
 
-const username = ref('');
-const password = ref('');
-const isPasswordVisible = ref(false);
+const router = useRouter();
+const PasswordVisible = ref(false);
+const loading = ref(false);
+const showError = ref(false);
+
+const userLogin = 'task100@gmail.com';
+const userPassword = 'colombia2025';
+
+//form
+const formLogin = ref<LoginForm>({
+  username: '',
+  password: '',
+});
+
+// validation of user
+const incorrectUser = computed(() =>
+  helpers.withMessage(
+    'Usuario o contraseña incorrectos',
+    () => !showError.value
+  )
+);
+
+// Validation rules
+const rules = computed(() => ({
+  username: [helpers.withMessage('Este campo es requerido', required)],
+  password: [
+    helpers.withMessage('Este campo es requerido', required),
+    incorrectUser.value,
+  ],
+}));
+
+const v$ = useVuelidate(rules, formLogin);
+
+// enable login
+function login() {
+  showError.value = false;
+  v$.value.$touch();
+
+  if (v$.value.$invalid) {
+    console.log('Formulario ha fallado en una validación');
+    return;
+  }
+
+  loading.value = true;
+
+  setTimeout(() => {
+    if (
+      formLogin.value.username === userLogin &&
+      formLogin.value.password === userPassword
+    ) {
+      router.push('/task-list');
+    } else {
+      showError.value = true;
+      v$.value.$validate();
+    }
+    loading.value = false;
+  }, 2000);
+}
 </script>
 
 <template>
@@ -12,7 +71,7 @@ const isPasswordVisible = ref(false);
       <h1 class="login__title">Login to TaskManagerProject</h1>
 
       <q-input
-        v-model="username"
+        v-model="formLogin.username"
         label="Username"
         placeholder="Enter your username"
         filled
@@ -21,11 +80,13 @@ const isPasswordVisible = ref(false);
         color="white"
         bg-color="gray"
         outlined
+        :error="v$.username.$dirty && v$.username.$invalid"
+        :error-message="v$.username.$errors[0]?.$message"
       />
 
       <q-input
-        v-model="password"
-        :type="isPasswordVisible ? 'text' : 'password'"
+        v-model="formLogin.password"
+        :type="PasswordVisible ? 'text' : 'password'"
         label="Password"
         placeholder="Enter your password"
         filled
@@ -34,21 +95,31 @@ const isPasswordVisible = ref(false);
         color="white"
         bg-color="gray"
         outlined
+        :error="v$.password.$dirty && v$.password.$invalid"
+        :error-message="v$.password.$errors[0]?.$message"
       >
         <template v-slot:append>
           <q-icon
-            :name="isPasswordVisible ? 'visibility' : 'visibility_off'"
+            :name="PasswordVisible ? 'visibility' : 'visibility_off'"
             class="login__icon"
-            @click="isPasswordVisible = !isPasswordVisible"
+            @click="PasswordVisible = !PasswordVisible"
           />
         </template>
       </q-input>
 
-      <q-btn label="Login" color="grey-7" class="login__button" no-caps />
-
-      <router-link to="/register-user" class="login__link">
-        registrar usuario
-      </router-link>
+      <q-btn
+        :disable="loading"
+        color="grey-7"
+        class="login__button"
+        no-caps
+        @click="login"
+      >
+        <template v-if="loading">
+          <q-spinner size="20px" color="white" />
+          Cargando...
+        </template>
+        <template v-else> Login </template>
+      </q-btn>
     </div>
 
     <div class="login__picture-container">
@@ -84,29 +155,25 @@ const isPasswordVisible = ref(false);
 }
 
 .login__title {
+  text-align: start;
   font-size: 36px;
-  line-height: 1.2;
+  margin-left: 10px;
   margin-bottom: 5px;
   white-space: nowrap;
 }
 
 .login__input,
 .login__button {
+  display: flex;
+  flex-direction: column;
   width: 100%;
   height: 56px;
   font-size: 20px;
+  margin: 10px;
 }
 
 .login__button {
   border-radius: 5px;
-}
-
-.login__link {
-  color: white;
-  text-align: center;
-  text-decoration: none;
-  margin-top: 10px;
-  display: block;
 }
 
 /* Ícono de visibilidad */
@@ -117,15 +184,16 @@ const isPasswordVisible = ref(false);
 
 /* Imagen */
 .login__picture-container {
-  max-width: 700px;
+  max-width: 600px;
   flex: 1;
   display: flex;
   justify-content: center;
+  margin-left: 100px;
 }
 
 .login__picture {
   width: 100%;
-  max-width: 500px;
+  max-width: 600px;
   object-fit: cover;
   border-radius: 8px;
 }
