@@ -1,10 +1,21 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import type { Task } from '@/interfaces/taskForm';
+import { ref, onMounted } from 'vue';
+import { useTaskStore } from '@/stores/userTaskStore';
 
-const taskTitle = ref('');
-const assignee = ref('');
-const taskDescription = ref('');
-const dueDate = ref('');
+const taskStore = useTaskStore();
+
+const taskForm = ref<Task>({
+  title: '',
+  assignee: '',
+  description: '',
+  id: 0,
+  status: 'Done',
+});
+
+onMounted(async () => {
+  await taskStore.fetchTasks();
+});
 </script>
 
 <template>
@@ -14,50 +25,134 @@ const dueDate = ref('');
         <q-icon name="menu" class="task-manager__menu-icon" />
         <strong class="task-manager__title">TaskManagerProject</strong>
       </div>
-      <button class="task-manager__logout">Logout</button>
+      <router-link to="/">
+        <button class="task-manager__logout">Logout</button>
+      </router-link>
     </nav>
 
+    <!-- Formulario para agregar tareas -->
     <div class="task-form">
       <strong class="task-form__title">Add New Task</strong>
 
       <div class="task-form__group">
         <q-input
-          v-model="taskTitle"
+          v-model="taskForm.title"
           class="task-form__input"
           label="Task Title"
           filled
           dense
+          color="dark"
         />
         <q-input
-          v-model="assignee"
+          v-model="taskForm.assignee"
           class="task-form__input"
           label="Assignee"
           filled
           dense
+          color="dark"
         />
       </div>
 
       <div class="task-form__group">
         <q-input
-          v-model="taskDescription"
+          v-model="taskForm.description"
           class="task-form__input"
           label="Task Description"
           filled
+          color="dark"
         />
       </div>
 
       <div class="task-form__group">
         <q-input
-          v-model="dueDate"
+          v-model="taskForm.status"
           class="task-form__input"
-          label="Due Date"
+          label="Status"
           filled
           dense
-          type="date"
+          color="dark"
         />
       </div>
 
       <button class="task-form__button">Add Task</button>
+
+      <!-- Loader mientras carga -->
+      <div v-if="taskStore.loading" class="task-list__loader">
+        <q-spinner color="gray" size="40px" />
+      </div>
+
+      <!-- Contenedor de tareas con 3 columnas -->
+      <div v-else class="task-list__container">
+        <!-- Sección To Do -->
+        <div class="task-list__column">
+          <h3 class="task-list__column-title">To Do</h3>
+          <div class="task-list__cards">
+            <div
+              v-for="task in taskStore.tasks.filter(
+                (t) => t.status === 'To Do'
+              )"
+              :key="task.id"
+              class="card to-do"
+            >
+              <div class="card-header">
+                <q-icon name="info" class="task-icon" />
+              </div>
+              <strong class="title-card">{{ task.title }}</strong>
+              <p>Asignado a {{ task.assignee }}</p>
+              <div class="card-footer">
+                <q-icon name="menu" class="task-icon__delete" />
+                <q-icon name="delete" class="task-icon__delete" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sección In Progress -->
+        <div class="task-list__column">
+          <h3 class="task-list__column-title">In Progress</h3>
+          <div class="task-list__cards">
+            <div
+              v-for="task in taskStore.tasks.filter(
+                (t) => t.status === 'In Progress'
+              )"
+              :key="task.id"
+              class="card in-progress"
+            >
+              <div class="card-header">
+                <q-icon name="info" class="task-icon" />
+              </div>
+              <strong class="title-card">{{ task.title }}</strong>
+              <p>Asignado a {{ task.assignee }}</p>
+              <div class="card-footer">
+                <q-icon name="menu" class="task-icon__delete" />
+                <q-icon name="delete" class="task-icon__delete" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sección Done -->
+        <div class="task-list__column">
+          <h3 class="task-list__column-title">Done</h3>
+          <div class="task-list__cards">
+            <div
+              v-for="task in taskStore.tasks.filter((t) => t.status === 'Done')"
+              :key="task.id"
+              class="card done"
+            >
+              <div class="card-header">
+                <q-icon name="info" class="task-icon" />
+              </div>
+              <strong class="title-card">{{ task.title }}</strong>
+              <p>Asignado a {{ task.assignee }}</p>
+              <div class="card-footer">
+                <q-icon name="menu" class="task-icon__delete" />
+                <q-icon name="delete" class="task-icon__delete" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -69,7 +164,7 @@ const dueDate = ref('');
   width: 100vw;
   background-color: rgb(233, 233, 233);
   box-sizing: border-box;
-  overflow: hidden;
+  overflow: auto;
 }
 
 /* Navbar */
@@ -154,5 +249,100 @@ const dueDate = ref('');
 
 .task-form__button:hover {
   background-color: rgb(50, 50, 50);
+}
+
+/* loader  */
+.task-list__loader {
+  margin-top: 30px;
+  display: flex;
+  justify-content: center;
+}
+
+/* Lista de tareas */
+
+/* Contenedor principal de las columnas */
+.task-list__container {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px;
+}
+
+.task-list__column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 70%;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.task-list__column-title {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.task-list__cards {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  overflow-y: auto;
+  max-height: 80%;
+  padding-right: 10px;
+}
+
+/* Estilos para las tarjetas */
+.title-card {
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.card {
+  width: 90%;
+  padding: 10px;
+  border-radius: 8px;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+  text-align: start;
+}
+.card:hover {
+  transform: scale(1.05);
+}
+
+/* Colores según el estado */
+.card.to-do {
+  background-color: #fdd9d9;
+  border-color: #f8b5b5;
+}
+
+.card.in-progress {
+  background-color: #ffffd1;
+  border-color: #f6e2a7;
+}
+
+.card.done {
+  background-color: #e4ffd7;
+  border-color: #b0ecbe;
+}
+/* iconos */
+.card-header {
+  display: flex;
+  justify-content: end;
+}
+
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+}
+.task-icon {
+  font-size: 24px;
+}
+
+.task-icon__delete {
+  font-size: 24px;
 }
 </style>

@@ -3,8 +3,10 @@ import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { helpers, required } from '@vuelidate/validators';
 import useVuelidate from '@vuelidate/core';
+import { useTaskStore } from '@/stores/userTaskStore';
 import type { LoginForm } from '@/interfaces/loginInterface';
 
+const taskStore = useTaskStore();
 const router = useRouter();
 const PasswordVisible = ref(false);
 const loading = ref(false);
@@ -43,11 +45,6 @@ function login() {
   showError.value = false;
   v$.value.$touch();
 
-  if (v$.value.$invalid) {
-    console.log('Formulario ha fallado en una validación');
-    return;
-  }
-
   loading.value = true;
 
   setTimeout(() => {
@@ -55,6 +52,9 @@ function login() {
       formLogin.value.username === userLogin &&
       formLogin.value.password === userPassword
     ) {
+      taskStore.fetchTasks();
+      console.log(taskStore.fetchTasks());
+
       router.push('/task-list');
     } else {
       showError.value = true;
