@@ -10,8 +10,24 @@ const taskForm = ref<Task>({
   assignee: '',
   description: '',
   id: 0,
-  status: 'Done',
+  status: '',
 });
+
+const statusOption = ['To Do', 'In Progress', 'Done'];
+
+function addTask() {
+  if (taskForm) {
+    taskStore.addTask({ ...taskForm.value });
+  }
+}
+
+function editTask() {
+  taskStore.updateTask({ ...taskForm.value });
+}
+
+function deleteTask(id: number) {
+  taskStore.deleteTask(id);
+}
 
 onMounted(async () => {
   await taskStore.fetchTasks();
@@ -64,17 +80,18 @@ onMounted(async () => {
       </div>
 
       <div class="task-form__group">
-        <q-input
+        <q-select
           v-model="taskForm.status"
+          :options="statusOption"
+          label="status"
           class="task-form__input"
-          label="Status"
           filled
           dense
           color="dark"
         />
       </div>
 
-      <button class="task-form__button">Add Task</button>
+      <button class="task-form__button" @click="addTask()">Add Task</button>
 
       <!-- Loader mientras carga -->
       <div v-if="taskStore.loading" class="task-list__loader">
@@ -101,7 +118,11 @@ onMounted(async () => {
               <p>Asignado a {{ task.assignee }}</p>
               <div class="card-footer">
                 <q-icon name="menu" class="task-icon__delete" />
-                <q-icon name="delete" class="task-icon__delete" />
+                <q-icon
+                  name="delete"
+                  class="task-icon__delete"
+                  @click="deleteTask(task.id)"
+                />
               </div>
             </div>
           </div>
@@ -123,9 +144,14 @@ onMounted(async () => {
               </div>
               <strong class="title-card">{{ task.title }}</strong>
               <p>Asignado a {{ task.assignee }}</p>
+              <strong> </strong>
               <div class="card-footer">
                 <q-icon name="menu" class="task-icon__delete" />
-                <q-icon name="delete" class="task-icon__delete" />
+                <q-icon
+                  name="delete"
+                  class="task-icon__delete"
+                  @click="deleteTask(task.id)"
+                />
               </div>
             </div>
           </div>
@@ -147,7 +173,11 @@ onMounted(async () => {
               <p>Asignado a {{ task.assignee }}</p>
               <div class="card-footer">
                 <q-icon name="menu" class="task-icon__delete" />
-                <q-icon name="delete" class="task-icon__delete" />
+                <q-icon
+                  name="delete"
+                  class="task-icon__delete"
+                  @click="deleteTask(task.id)"
+                />
               </div>
             </div>
           </div>
@@ -287,6 +317,7 @@ onMounted(async () => {
 
 .task-list__cards {
   width: 100%;
+  height: 425px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -294,6 +325,7 @@ onMounted(async () => {
   overflow-y: auto;
   max-height: 80%;
   padding-right: 10px;
+  overflow-y: auto;
 }
 
 /* Estilos para las tarjetas */

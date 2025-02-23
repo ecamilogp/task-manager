@@ -1,5 +1,4 @@
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
 import axios from 'axios';
 import type { Task } from '@/interfaces/taskForm';
 
@@ -10,6 +9,16 @@ export const useTaskStore = defineStore('taskStore', {
   }),
 
   actions: {
+    saveTask() {
+      const save = JSON.stringify(this.tasks);
+      localStorage.setItem('task', save);
+    },
+
+    recoverTask() {
+      const recover = localStorage.getItem('task');
+      this.tasks = recover ? (JSON.parse(recover) as Task[]) : [];
+    },
+
     async fetchTasks() {
       this.loading = true;
       try {
@@ -32,6 +41,39 @@ export const useTaskStore = defineStore('taskStore', {
         console.error('Error fetching tasks:', error);
       } finally {
         this.loading = false;
+      }
+    },
+
+    async addTask(data: Task) {
+      try {
+        if (data) {
+          data.id = Math.floor(Math.random() * 300);
+          this.tasks.push(data);
+          this.saveTask();
+        }
+      } catch (error) {
+        console.log('ha fallado la creacion de la tarea', error);
+      }
+    },
+
+    async updateTask(data: Task) {
+      try {
+        const index = this.tasks.findIndex((t) => t.id === data.id);
+        if (index !== -1) {
+          this.tasks.splice(index, 1, data);
+          this.saveTask();
+        }
+      } catch (error) {
+        console.log('error al actualizar la tareas', error);
+      }
+    },
+
+    async deleteTask(id: number) {
+      try {
+        this.tasks = this.tasks.filter((t) => t.id !== id);
+        this.saveTask();
+      } catch (error) {
+        console.log('error al eliminar la tarea', error);
       }
     },
   },

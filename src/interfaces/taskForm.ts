@@ -3,5 +3,5 @@ export interface Task {
   title: string;
   assignee: string;
   description: string;
-  status: 'To Do' | 'In Progress' | 'Done';
+  status: string | 'To Do' | 'In Progress' | 'Done';
 }
