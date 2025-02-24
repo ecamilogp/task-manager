@@ -1,36 +1,36 @@
 <script setup lang="ts">
-import type { Task } from '@/interfaces/taskForm';
-import { ref, onMounted } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useTaskStore } from '@/stores/userTaskStore';
 
 const taskStore = useTaskStore();
-
-const taskForm = ref<Task>({
-  title: '',
-  assignee: '',
-  description: '',
-  id: 0,
-  status: '',
-});
-
 const statusOption = ['To Do', 'In Progress', 'Done'];
 
+const taskForm = computed(() => taskStore.currentTask);
+
 function addTask() {
-  if (taskForm) {
+  if (taskForm.value) {
     taskStore.addTask({ ...taskForm.value });
+    resetForm();
   }
 }
 
-function editTask() {
-  taskStore.updateTask({ ...taskForm.value });
-}
+// function editTask() {
+//   taskStore.updateTask({ ...taskForm.value });
+// }
 
 function deleteTask(id: number) {
   taskStore.deleteTask(id);
 }
 
-onMounted(async () => {
-  await taskStore.fetchTasks();
+function resetForm() {
+  taskStore.resetCurrentForm();
+}
+
+onMounted(() => {
+  taskStore.recoverTask();
+  if (taskStore.tasks.length === 0) {
+    taskStore.fetchTasks();
+  }
 });
 </script>
 
@@ -112,12 +112,17 @@ onMounted(async () => {
               class="card to-do"
             >
               <div class="card-header">
-                <q-icon name="info" class="task-icon" />
+                <div class="tooltip-container">
+                  <q-icon name="info" class="task-icon" />
+                  <div class="tooltip">{{ task.description }}</div>
+                </div>
               </div>
               <strong class="title-card">{{ task.title }}</strong>
-              <p>Asignado a {{ task.assignee }}</p>
+
+              <p>asignado a {{ task.assignee }}</p>
+
               <div class="card-footer">
-                <q-icon name="menu" class="task-icon__delete" />
+                <q-icon name="menu" class="task-icon__menu" />
                 <q-icon
                   name="delete"
                   class="task-icon__delete"
@@ -140,13 +145,18 @@ onMounted(async () => {
               class="card in-progress"
             >
               <div class="card-header">
-                <q-icon name="info" class="task-icon" />
+                <div class="tooltip-container">
+                  <q-icon name="info" class="task-icon" />
+                  <div class="tooltip">{{ task.description }}</div>
+                </div>
               </div>
               <strong class="title-card">{{ task.title }}</strong>
-              <p>Asignado a {{ task.assignee }}</p>
+
+              <p>asignado a {{ task.assignee }}</p>
+
               <strong> </strong>
               <div class="card-footer">
-                <q-icon name="menu" class="task-icon__delete" />
+                <q-icon name="menu" class="task-icon__menu" />
                 <q-icon
                   name="delete"
                   class="task-icon__delete"
@@ -167,12 +177,17 @@ onMounted(async () => {
               class="card done"
             >
               <div class="card-header">
-                <q-icon name="info" class="task-icon" />
+                <div class="tooltip-container">
+                  <q-icon name="info" class="task-icon" />
+                  <div class="tooltip">{{ task.description }}</div>
+                </div>
               </div>
               <strong class="title-card">{{ task.title }}</strong>
-              <p>Asignado a {{ task.assignee }}</p>
+
+              <p>asignado a {{ task.assignee }}</p>
+
               <div class="card-footer">
-                <q-icon name="menu" class="task-icon__delete" />
+                <q-icon name="menu" class="task-icon__menu" />
                 <q-icon
                   name="delete"
                   class="task-icon__delete"
@@ -360,15 +375,18 @@ onMounted(async () => {
   background-color: #e4ffd7;
   border-color: #b0ecbe;
 }
+
 /* iconos */
 .card-header {
   display: flex;
   justify-content: end;
+  cursor: pointer;
 }
 
 .card-footer {
   display: flex;
   justify-content: space-between;
+  cursor: pointer;
 }
 .task-icon {
   font-size: 24px;
@@ -376,5 +394,34 @@ onMounted(async () => {
 
 .task-icon__delete {
   font-size: 24px;
+}
+
+.task-icon__menu {
+  font-size: 24px;
+}
+
+/* Estilo del tooltip */
+.tooltip {
+  visibility: hidden;
+  background-color: rgb(104, 102, 102);
+  color: #fff;
+  text-align: center;
+  max-width: 49%;
+  max-height: 75%;
+  padding: 10px;
+  font-size: 14px;
+  position: absolute;
+  top: 30px;
+  left: 50%;
+  z-index: 10;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  overflow-y: auto;
+}
+
+/* Mostrar tooltip en hover */
+.tooltip-container:hover .tooltip {
+  visibility: visible;
+  opacity: 1;
 }
 </style>

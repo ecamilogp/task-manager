@@ -1,10 +1,12 @@
 import { defineStore } from 'pinia';
 import axios from 'axios';
 import type { Task } from '@/interfaces/taskForm';
+import { FORM_INITIAL } from '@/constants/formInitial';
 
 export const useTaskStore = defineStore('taskStore', {
   state: () => ({
     tasks: [] as Task[],
+    currentTask: { ...FORM_INITIAL } as Task,
     loading: false,
   }),
 
@@ -75,6 +77,10 @@ export const useTaskStore = defineStore('taskStore', {
       } catch (error) {
         console.log('error al eliminar la tarea', error);
       }
+    },
+
+    resetCurrentForm() {
+      Object.assign(this.currentTask, { ...FORM_INITIAL });
     },
   },
 });
