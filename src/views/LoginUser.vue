@@ -43,11 +43,6 @@ function login() {
   showError.value = false;
   v$.value.$touch();
 
-  if (v$.value.$invalid) {
-    console.log('Formulario ha fallado en una validación');
-    return;
-  }
-
   loading.value = true;
 
   setTimeout(() => {
