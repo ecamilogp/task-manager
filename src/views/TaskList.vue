@@ -63,7 +63,7 @@ async function addTask() {
 
 async function deleteTask(id: number) {
   await taskStore.deleteTask(id);
-  showNotify('negative', 'Tarea eliminada correctamente');
+  showNotify('positive', 'Tarea eliminada correctamente');
 }
 
 function openDeleteModal(id: number) {
@@ -445,11 +445,12 @@ onBeforeMount(async () => {
 /* Estilo del tooltip */
 .tooltip {
   visibility: hidden;
-  background-color: rgb(104, 102, 102);
+  background-color: rgba(104, 102, 102, 0.939);
   color: #fff;
   text-align: center;
-  max-width: 49%;
-  max-height: 75%;
+  width: 49%;
+  height: 47%;
+  margin-top: 5px;
   padding: 10px;
   font-size: 14px;
   position: absolute;
@@ -458,19 +459,10 @@ onBeforeMount(async () => {
   z-index: 10;
   word-wrap: break-word;
   overflow-wrap: break-word;
-  overflow-y: auto;
 }
 
 /* Mostrar tooltip en hover */
 .tooltip-container:hover .tooltip {
   visibility: visible;
-  opacity: 1;
-}
-
-.char-counter {
-  font-size: 12px;
-  color: gray;
-  text-align: right;
-  margin-top: 4px;
 }
 </style>
