@@ -1,16 +1,60 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useTaskStore } from '@/stores/userTaskStore';
+import { helpers, maxLength, minLength, required } from '@vuelidate/validators';
+import showNotify from '@/utils/showNotify';
+import useVuelidate from '@vuelidate/core';
+import DeleteModal from './DeleteModal.vue';
 
 const taskStore = useTaskStore();
 const statusOption = ['To Do', 'In Progress', 'Done'];
+const loading = ref(false);
+const deleteModal = ref(false);
+const taskToDelete = ref<number | null>(null);
 
 const taskForm = computed(() => taskStore.currentTask);
 
-function addTask() {
-  if (taskForm.value) {
-    taskStore.addTask({ ...taskForm.value });
-    resetForm();
+const rules = computed(() => ({
+  title: [
+    helpers.withMessage('Este campo es requerido', required),
+    helpers.withMessage('Mínimo 5 caracteres', minLength(5)),
+    helpers.withMessage('Máximo se permiten 20 caracteres', maxLength(20)),
+  ],
+  assignee: [
+    helpers.withMessage('Este campo es requerido', required),
+    helpers.withMessage('Mínimo 5 caracteres', minLength(5)),
+    helpers.withMessage('Máximo se permiten 20 caracteres', maxLength(20)),
+  ],
+  description: [
+    helpers.withMessage('Este campo es requerido', required),
+    helpers.withMessage('Mínimo 5 caracteres', minLength(5)),
+    helpers.withMessage('Máximo se permiten 50 caracteres', maxLength(50)),
+  ],
+  status: [helpers.withMessage('Este campo es requerido', required)],
+}));
+
+const v$ = useVuelidate(rules, taskForm);
+
+async function addTask() {
+  const isValid = await v$.value.$validate();
+  if (!isValid) {
+    console.log('Error al enviar el formulario');
+    return;
+  }
+
+  loading.value = true;
+
+  try {
+    if (taskForm.value) {
+      await taskStore.addTask({ ...taskForm.value });
+      showNotify('positive', 'tarea asignada correctamente');
+      resetForm();
+      v$.value.$reset();
+    }
+  } catch (error) {
+    console.error('Error al asignar la  tarea:', error);
+  } finally {
+    loading.value = false;
   }
 }
 
@@ -18,12 +62,30 @@ function addTask() {
 //   taskStore.updateTask({ ...taskForm.value });
 // }
 
-function deleteTask(id: number) {
-  taskStore.deleteTask(id);
+async function deleteTask(id: number) {
+  await taskStore.deleteTask(id);
+  showNotify('negative', 'Tarea eliminada correctamente');
+}
+
+function openDeleteModal(id: number) {
+  taskToDelete.value = id;
+  deleteModal.value = true;
+}
+
+function confirmDelete() {
+  if (taskToDelete.value !== null) {
+    deleteTask(taskToDelete.value);
+    closeDeleteModal();
+  }
 }
 
 function resetForm() {
   taskStore.resetCurrentForm();
+  v$.value.$reset();
+}
+
+function closeDeleteModal() {
+  deleteModal.value = false;
 }
 
 onMounted(() => {
@@ -58,6 +120,8 @@ onMounted(() => {
           filled
           dense
           color="dark"
+          :error="v$.title.$dirty && v$.title.$invalid"
+          :error-message="v$.title.$errors[0]?.$message"
         />
         <q-input
           v-model="taskForm.assignee"
@@ -66,6 +130,8 @@ onMounted(() => {
           filled
           dense
           color="dark"
+          :error="v$.assignee.$dirty && v$.assignee.$invalid"
+          :error-message="v$.assignee.$errors[0]?.$message"
         />
       </div>
 
@@ -76,6 +142,8 @@ onMounted(() => {
           label="Task Description"
           filled
           color="dark"
+          :error="v$.description.$dirty && v$.description.$invalid"
+          :error-message="v$.description.$errors[0]?.$message"
         />
       </div>
 
@@ -88,10 +156,19 @@ onMounted(() => {
           filled
           dense
           color="dark"
+          :error="v$.status.$dirty && v$.status.$invalid"
+          :error-message="v$.status.$errors[0]?.$message"
         />
       </div>
 
-      <button class="task-form__button" @click="addTask()">Add Task</button>
+      <button
+        v-if="!loading"
+        class="task-form__button"
+        :disabled="loading"
+        @click="addTask()"
+      >
+        Add Task
+      </button>
 
       <!-- Loader mientras carga -->
       <div v-if="taskStore.loading" class="task-list__loader">
@@ -110,6 +187,7 @@ onMounted(() => {
               )"
               :key="task.id"
               class="card to-do"
+              :draggable="true"
             >
               <div class="card-header">
                 <div class="tooltip-container">
@@ -126,7 +204,7 @@ onMounted(() => {
                 <q-icon
                   name="delete"
                   class="task-icon__delete"
-                  @click="deleteTask(task.id)"
+                  @click="openDeleteModal(task.id)"
                 />
               </div>
             </div>
@@ -143,6 +221,7 @@ onMounted(() => {
               )"
               :key="task.id"
               class="card in-progress"
+              :draggable="true"
             >
               <div class="card-header">
                 <div class="tooltip-container">
@@ -160,7 +239,7 @@ onMounted(() => {
                 <q-icon
                   name="delete"
                   class="task-icon__delete"
-                  @click="deleteTask(task.id)"
+                  @click="openDeleteModal(task.id)"
                 />
               </div>
             </div>
@@ -175,6 +254,7 @@ onMounted(() => {
               v-for="task in taskStore.tasks.filter((t) => t.status === 'Done')"
               :key="task.id"
               class="card done"
+              :draggable="true"
             >
               <div class="card-header">
                 <div class="tooltip-container">
@@ -191,7 +271,7 @@ onMounted(() => {
                 <q-icon
                   name="delete"
                   class="task-icon__delete"
-                  @click="deleteTask(task.id)"
+                  @click="openDeleteModal(task.id)"
                 />
               </div>
             </div>
@@ -200,6 +280,11 @@ onMounted(() => {
       </div>
     </div>
   </div>
+  <DeleteModal
+    v-if="deleteModal"
+    @confirm="confirmDelete"
+    @cancel="closeDeleteModal"
+  />
 </template>
 
 <style scoped>
@@ -423,5 +508,12 @@ onMounted(() => {
 .tooltip-container:hover .tooltip {
   visibility: visible;
   opacity: 1;
+}
+
+.char-counter {
+  font-size: 12px;
+  color: gray;
+  text-align: right;
+  margin-top: 4px;
 }
 </style>

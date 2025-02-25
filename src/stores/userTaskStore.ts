@@ -33,11 +33,7 @@ export const useTaskStore = defineStore('taskStore', {
           title: task.title,
           assignee: ` alex`,
           description: 'No hay descripción disponible',
-          status: task.completed
-            ? task.inProgress
-              ? 'In Progress'
-              : 'Done'
-            : 'To Do',
+          status: task.completed ? 'Done' : 'To Do',
         }));
       } catch (error) {
         console.error('Error fetching tasks:', error);
