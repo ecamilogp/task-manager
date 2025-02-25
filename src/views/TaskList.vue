@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onBeforeMount, ref, watchEffect } from 'vue';
 import { useTaskStore } from '@/stores/userTaskStore';
 import { helpers, maxLength, minLength, required } from '@vuelidate/validators';
 import showNotify from '@/utils/showNotify';
@@ -7,11 +7,13 @@ import useVuelidate from '@vuelidate/core';
 import DeleteModal from './DeleteModal.vue';
 
 const taskStore = useTaskStore();
+const draggingTask = ref<number | null>(null);
 const statusOption = ['To Do', 'In Progress', 'Done'];
 const loading = ref(false);
 const deleteModal = ref(false);
 const taskToDelete = ref<number | null>(null);
 
+// reglas de validacion
 const taskForm = computed(() => taskStore.currentTask);
 
 const rules = computed(() => ({
@@ -35,6 +37,7 @@ const rules = computed(() => ({
 
 const v$ = useVuelidate(rules, taskForm);
 
+// funciones crud
 async function addTask() {
   const isValid = await v$.value.$validate();
   if (!isValid) {
@@ -57,10 +60,6 @@ async function addTask() {
     loading.value = false;
   }
 }
-
-// function editTask() {
-//   taskStore.updateTask({ ...taskForm.value });
-// }
 
 async function deleteTask(id: number) {
   await taskStore.deleteTask(id);
@@ -88,7 +87,29 @@ function closeDeleteModal() {
   deleteModal.value = false;
 }
 
-onMounted(() => {
+// funciones de draggable
+function onDragStart(event: DragEvent, taskId: number) {
+  draggingTask.value = taskId;
+  event.dataTransfer?.setData('text/plain', taskId.toString());
+}
+
+function onDragOver(event: DragEvent) {
+  event.preventDefault();
+}
+
+function onDrop(event: DragEvent, newStatus: string) {
+  event.preventDefault();
+  const taskId = draggingTask.value;
+  if (taskId !== null) {
+    const task = taskStore.tasks.find((t) => t.id === taskId);
+    if (task) {
+      taskStore.updateTask({ ...task, status: newStatus });
+    }
+  }
+  draggingTask.value = null;
+}
+
+onBeforeMount(async () => {
   taskStore.recoverTask();
   if (taskStore.tasks.length === 0) {
     taskStore.fetchTasks();
@@ -177,17 +198,22 @@ onMounted(() => {
 
       <!-- Contenedor de tareas con 3 columnas -->
       <div v-else class="task-list__container">
-        <!-- Sección To Do -->
-        <div class="task-list__column">
-          <h3 class="task-list__column-title">To Do</h3>
+        <div
+          v-for="status in ['To Do', 'In Progress', 'Done']"
+          :key="status"
+          class="task-list__column"
+          @dragover="onDragOver"
+          @drop="(event) => onDrop(event, status)"
+        >
+          <h3 class="task-list__column-title">{{ status }}</h3>
           <div class="task-list__cards">
             <div
-              v-for="task in taskStore.tasks.filter(
-                (t) => t.status === 'To Do'
-              )"
+              v-for="task in taskStore.tasks.filter((t) => t.status === status)"
               :key="task.id"
-              class="card to-do"
+              class="card"
+              :class="status.toLowerCase().replace(' ', '-')"
               :draggable="true"
+              @dragstart="(event) => onDragStart(event, task.id)"
             >
               <div class="card-header">
                 <div class="tooltip-container">
@@ -196,76 +222,7 @@ onMounted(() => {
                 </div>
               </div>
               <strong class="title-card">{{ task.title }}</strong>
-
               <p>asignado a {{ task.assignee }}</p>
-
-              <div class="card-footer">
-                <q-icon name="menu" class="task-icon__menu" />
-                <q-icon
-                  name="delete"
-                  class="task-icon__delete"
-                  @click="openDeleteModal(task.id)"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Sección In Progress -->
-        <div class="task-list__column">
-          <h3 class="task-list__column-title">In Progress</h3>
-          <div class="task-list__cards">
-            <div
-              v-for="task in taskStore.tasks.filter(
-                (t) => t.status === 'In Progress'
-              )"
-              :key="task.id"
-              class="card in-progress"
-              :draggable="true"
-            >
-              <div class="card-header">
-                <div class="tooltip-container">
-                  <q-icon name="info" class="task-icon" />
-                  <div class="tooltip">{{ task.description }}</div>
-                </div>
-              </div>
-              <strong class="title-card">{{ task.title }}</strong>
-
-              <p>asignado a {{ task.assignee }}</p>
-
-              <strong> </strong>
-              <div class="card-footer">
-                <q-icon name="menu" class="task-icon__menu" />
-                <q-icon
-                  name="delete"
-                  class="task-icon__delete"
-                  @click="openDeleteModal(task.id)"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Sección Done -->
-        <div class="task-list__column">
-          <h3 class="task-list__column-title">Done</h3>
-          <div class="task-list__cards">
-            <div
-              v-for="task in taskStore.tasks.filter((t) => t.status === 'Done')"
-              :key="task.id"
-              class="card done"
-              :draggable="true"
-            >
-              <div class="card-header">
-                <div class="tooltip-container">
-                  <q-icon name="info" class="task-icon" />
-                  <div class="tooltip">{{ task.description }}</div>
-                </div>
-              </div>
-              <strong class="title-card">{{ task.title }}</strong>
-
-              <p>asignado a {{ task.assignee }}</p>
-
               <div class="card-footer">
                 <q-icon name="menu" class="task-icon__menu" />
                 <q-icon

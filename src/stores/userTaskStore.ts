@@ -18,7 +18,11 @@ export const useTaskStore = defineStore('taskStore', {
 
     recoverTask() {
       const recover = localStorage.getItem('task');
-      this.tasks = recover ? (JSON.parse(recover) as Task[]) : [];
+      if (recover) {
+        this.tasks = JSON.parse(recover) as Task[];
+      } else {
+        this.tasks = [];
+      }
     },
 
     async fetchTasks() {
